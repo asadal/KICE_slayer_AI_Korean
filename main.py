@@ -38,9 +38,7 @@ def set_openai_key():
 
 def get_answer_one_problem(data, paragraph_num: int, problem_num: int, prompt_func: callable = basic_prompt):
     problem = data[paragraph_num]["problems"][problem_num]
-    no_paragraph = False
-    if "no_paragraph" in list(problem.keys()):
-        no_paragraph = True
+    no_paragraph = "no_paragraph" in list(problem.keys())
     if "question_plus" in list(problem.keys()):
         question_plus_text = problem["question_plus"]
     else:
@@ -54,33 +52,21 @@ def get_answer_one_problem(data, paragraph_num: int, problem_num: int, prompt_fu
 
 def get_prompt_by_type(type_num: int) -> callable:
     # 0 : 비문학, 1 : 문학, 2 : 화법과 작문, 3 : 문법
-    if type_num == 0:
-        return literature_prompt
-    elif type_num == 1:
-        return literature_prompt
-    elif type_num == 2:
-        return literature_prompt
-    else:
-        return grammar_prompt
+    return literature_prompt if type_num in {0, 1, 2} else grammar_prompt
 
 
 def save_results_txt(data, save_path: str, answer_list: List[str]):
-    solutions = list()
+    solutions = []
     for pa in data:
-        for problem in pa["problems"]:
-            solutions.append(problem["answer"])
-
-    scores = list()
+        solutions.extend(problem["answer"] for problem in pa["problems"])
+    scores = []
     for pa in data:
-        for problem in pa["problems"]:
-            scores.append(problem["score"])
-
-    f = open(save_path, 'w', encoding='UTF-8')
-    for i, item in enumerate(answer_list):
-        txt = f'{i + 1}번 문제 : {item}\n정답 : {solutions[i]}\n배점 : {scores[i]}\n----------------------------\n'
-        print(txt)
-        f.write(txt)
-    f.close()
+        scores.extend(problem["score"] for problem in pa["problems"])
+    with open(save_path, 'w', encoding='UTF-8') as f:
+        for i, item in enumerate(answer_list):
+            txt = f'{i + 1}번 문제 : {item}\n정답 : {solutions[i]}\n배점 : {scores[i]}\n----------------------------\n'
+            print(txt)
+            f.write(txt)
     print("saved DONE")
 
 
@@ -90,7 +76,7 @@ def save_results_txt(data, save_path: str, answer_list: List[str]):
 def main(test_file, save_path):
     set_openai_key()
     test = load_test(test_file)
-    answer_list = list()
+    answer_list = []
     for paragraph_index, paragraph in enumerate(test):
         prompt_func = get_prompt_by_type(int(paragraph["type"]))
         for problem_index, problem in tqdm(enumerate(paragraph["problems"])):
